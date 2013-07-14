@@ -15,6 +15,19 @@
 		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
 	</properties>
 
+	<organization>
+		<name>IDF Connect, Inc.</name>
+		<url>http://www.idfconnect.com</url>
+	</organization>
+	<issueManagement>
+		<url>https://sourceforge.net/p/mavenproguard/tickets/</url>
+	</issueManagement>
+	<scm>
+		<url>https://svn.code.sf.net/p/mavenproguard/code/trunk</url>
+		<developerConnection>Richard Sand</developerConnection>
+	</scm>
+	<description>A maven plug-in to obfuscate project artifacts using ProGuard (http://proguard.sourceforge.net/)</description>
+
 	<dependencies>
 		<dependency>
 			<groupId>org.apache.maven</groupId>
@@ -170,16 +183,10 @@
 			</dependency>
 		</dependencies>
 	</dependencyManagement>
-	<organization>
-		<name>IDF Connect, Inc.</name>
-		<url>http://www.idfconnect.com</url>
-	</organization>
-	<issueManagement>
-		<url>https://sourceforge.net/p/mavenproguard/tickets/</url>
-	</issueManagement>
-	<scm>
-		<url>https://svn.code.sf.net/p/mavenproguard/code/trunk</url>
-		<developerConnection>Richard Sand</developerConnection>
-	</scm>
-	<description>A maven plug-in to obfuscate project artifacts using ProGuard (http://proguard.sourceforge.net/)</description>
+	<developers>
+		<developer>Richard Sand</developer>
+	</developers>
+	<licenses>
+		<license>GPL 2.0</license>
+	</licenses>
 </project>
