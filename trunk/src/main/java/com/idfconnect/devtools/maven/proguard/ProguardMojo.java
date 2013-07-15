@@ -401,7 +401,7 @@ public final class ProguardMojo extends AbstractMojo {
                 if (artifact == null)
                     throw new MojoExecutionException("No artifact was found matching " + str + ", please update your project dependencies");
                 addInputJar(getFileForArtifact(artifact).getAbsolutePath());
-                if (artifact.getScope().equalsIgnoreCase(Artifact.SCOPE_COMPILE) || artifact.getScope().equalsIgnoreCase(Artifact.SCOPE_COMPILE_PLUS_RUNTIME)) {
+                if (attach && (artifact.getScope().equalsIgnoreCase(Artifact.SCOPE_COMPILE) || artifact.getScope().equalsIgnoreCase(Artifact.SCOPE_COMPILE_PLUS_RUNTIME))) {
                     log.info("Changing artifact " + artifact + " to scope " + Artifact.SCOPE_PROVIDED);
                     if (!test) {
                         artifact.setScope(Artifact.SCOPE_PROVIDED);
