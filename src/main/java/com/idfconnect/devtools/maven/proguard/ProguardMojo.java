@@ -25,10 +25,12 @@ import proguard.ConfigurationParser;
 import proguard.ProGuard;
 
 /**
- * Maven plug-in for using ProGuard to obfuscate project artifacts
+ * A Maven 3.0 plug-in for using ProGuard to obfuscate project artifacts
+ * 
+ * @author Richard Sand
  */
 @Mojo(name = "obfuscate", defaultPhase = LifecyclePhase.PROCESS_CLASSES, requiresDependencyResolution = ResolutionScope.COMPILE_PLUS_RUNTIME)
-public class ProguardMojo extends AbstractMojo {
+public final class ProguardMojo extends AbstractMojo {
     /**
      * Internal class for holding a single ProGuard command-line option
      */
@@ -94,7 +96,6 @@ public class ProguardMojo extends AbstractMojo {
      * Set this to 'false' to keep the original input files after obfuscation has completed. The default value is 'true' which means the files will be deleted.
      * Note that this does not apply to the primary <em>inputFile</em> if the output overwrites the same file, or if the input file is a folder (e.g.
      * target/classes)
-     * 
      */
     @Parameter(defaultValue = "true", property = "proguard.deleteinput")
     private boolean               deleteInputFiles     = false;
@@ -103,21 +104,18 @@ public class ProguardMojo extends AbstractMojo {
      * Includes additional ProGuard configuration options from the provided file. This defaults to
      * <code>${basedir}/src/main/config/${project.artifactId}-maven.pro</code>. If no such file exists, the parameter is ignored. This behavior can be disabled
      * by the parameter <em>ignoreIncludeFile</em>
-     * 
      */
     @Parameter(defaultValue = "${basedir}/src/main/config/${project.artifactId}-maven.pro")
     private String                proguardIncludeFile;
 
     /**
      * Set this to 'true' to disable the parameter <em>proguardInclude</em>
-     * 
      */
     @Parameter(defaultValue = "false", property = "proguard.ignoreincludefile")
     private boolean               ignoreIncludeFile    = false;
 
     /**
      * Other arbitrary ProGuard configuration options
-     * 
      */
     @Parameter
     private Map<String, String>   options;
@@ -205,7 +203,8 @@ public class ProguardMojo extends AbstractMojo {
 
     /**
      * Specifies the names of the output archive file. If <code>attach=true</code> then this value ignored and the name is constructed based on the classifier.
-     * If no value is specified, the inputFile will be used and overwritten
+     * If no value is specified, it will default to the default to <code>${project.build.finalName}.${project.packaging}</code>,
+     * or to <code>${project.build.finalName}-&lt;artifactClassifier&gt;.${project.packaging}</code> if a classifier is specified.
      */
     @Parameter
     private String                outputFile;
@@ -218,18 +217,17 @@ public class ProguardMojo extends AbstractMojo {
     private boolean               attach               = false;
 
     /**
-     * Specifies the artifact type to attach. Defaults to <em>${project.packaging}</em>. This value is ignored if <em>attach=false</em>
+     * Specifies the artifact type to attach. Defaults to <em>${project.packaging}</em>
      * 
      */
     @Parameter(defaultValue = "${project.packaging}")
-    private String                attachArtifactType;
+    private String                outputArtifactType;
 
     /**
-     * Specifies the attached artifact Classifier. The default value is "small". This value is ignored if <em>attach=false</em>
-     * 
+     * Specifies the output artifact Classifier. The default value is "small".
      */
     @Parameter(defaultValue = "small")
-    private String                attachArtifactClassifier;
+    private String                outputArtifactClassifier;
 
     /**
      * Indicates whether the <em>attachArtifactClassifier</em> should be appended to the attached artifact's final name. Default value is true. This value is
@@ -297,10 +295,10 @@ public class ProguardMojo extends AbstractMojo {
      * docs, all names with special characters like spaces and parentheses must be quoted with single or double quotes. If for any reason the canonical name
      * cannot be determine, it uses the absolute name instead
      * 
-     * @param
-     * @return
+     * @param file
+     * @return the canonical or absolute filename as a String enclosed in single quotes
      */
-    public static final String returnQuotedFilename(File file) {
+    protected static final String returnQuotedFilename(File file) {
         try {
             return "'" + file.getCanonicalPath() + "'";
         } catch (IOException e) {
@@ -308,20 +306,18 @@ public class ProguardMojo extends AbstractMojo {
         }
     }
 
-    private boolean useArtifactClassifier() {
-        return appendClassifier && ((attachArtifactClassifier != null) && (attachArtifactClassifier.length() > 0));
-    }
-
     /**
      * Main execution method
      */
     public void execute() throws MojoExecutionException, MojoFailureException {
-        // Log and sanity check
+        // Log and sanity checks
         Log log = getLog();
         if (skip) {
             log.info("Bypassing ProGuard plug-in because proguard.skip is set to 'true'");
             return;
         }
+        if (appendClassifier && ((outputArtifactClassifier == null) || ("".equals(outputArtifactClassifier.length()))))
+            throw new MojoExecutionException("AppendClassifier was set to true but no classifier value was provided");
 
         // Initialize instance variables
         args = new ArrayList<Option>(); // The ProGuard arguments list
@@ -341,12 +337,12 @@ public class ProguardMojo extends AbstractMojo {
             throw new MojoFailureException("Cannot find file " + inJarFile);
         }
 
-        // Set the output file if attach=true
-        if (attach) {
+        // Compute the output file if not provided OR if attach=true
+        if (attach || (outputFile == null)) {
             StringBuffer outputFileBuf = new StringBuffer(FilenameUtils.getBaseName(inputFile));
-            if (useArtifactClassifier())
-                outputFileBuf.append('-').append(attachArtifactClassifier);
-            outputFileBuf.append('.').append(attachArtifactType);
+            if (appendClassifier)
+                outputFileBuf.append('-').append(outputArtifactClassifier);
+            outputFileBuf.append('.').append(outputArtifactType);
             outputFile = outputFileBuf.toString();
             log.info("Setting output file to " + outputFile);
         }
@@ -355,15 +351,15 @@ public class ProguardMojo extends AbstractMojo {
             sameArtifact = false;
             outJarFile = (new File(buildDirectory, outputFile)).getAbsoluteFile();
             log.debug("Using output file " + outJarFile);
-            if (!test && outJarFile.exists() && (!deleteFileOrDirectory(outJarFile))) // TODO dangerous?
+            if (!test && outJarFile.exists() && (!deleteFileOrDirectory(outJarFile)))
                 throw new MojoFailureException("Cannot delete existing file " + outJarFile);
         } else {
-            // Writing back to our input file/folder - back up the input file first
+            // Writing back to our input file/folder - in this case we must back up the input file first
             outJarFile = inJarFile.getAbsoluteFile();
             File backupFile = new File(buildDirectory, FilenameUtils.getBaseName(inputFile) + "_proguard_base" + ((!inJarFile.isDirectory() ? ".jar" : "")));
             log.info("Backing up existing file " + outJarFile.getAbsolutePath() + " to " + backupFile.getAbsolutePath());
             if (backupFile.exists() && !test) {
-                if (!deleteFileOrDirectory(backupFile)) // TODO dangerous?
+                if (!deleteFileOrDirectory(backupFile))
                     throw new MojoFailureException("Cannot delete existing backup file " + backupFile);
             }
 
@@ -529,7 +525,7 @@ public class ProguardMojo extends AbstractMojo {
         // Attach new artifact to project
         if (!test && attach && !sameArtifact) {
             log.info("Attaching resulting artifact to project: " + outJarFile);
-            mavenProjectHelper.attachArtifact(mavenProject, attachArtifactType, (useArtifactClassifier() ? attachArtifactClassifier : null), outJarFile);
+            mavenProjectHelper.attachArtifact(mavenProject, outputArtifactType, (appendClassifier ? outputArtifactClassifier : null), outJarFile);
         }
     }
 
@@ -539,7 +535,7 @@ public class ProguardMojo extends AbstractMojo {
      * @param options
      * @throws MojoExecutionException
      */
-    private void launchProguard(List<Option> options) throws MojoExecutionException {
+    protected void launchProguard(List<Option> options) throws MojoExecutionException {
         getLog().info(ProGuard.VERSION);
 
         if (options == null || options.size() == 0) {
@@ -569,17 +565,18 @@ public class ProguardMojo extends AbstractMojo {
         }
     }
 
+    // TODO replace this
     private static boolean deleteFileOrDirectory(File path) throws MojoFailureException {
         if (path.isDirectory()) {
             File[] files = path.listFiles();
             for (int i = 0; i < files.length; i++) {
                 if (files[i].isDirectory()) {
                     if (!deleteFileOrDirectory(files[i])) {
-                        throw new MojoFailureException("Can't delete dir " + files[i]);
+                        throw new MojoFailureException("Cannot delete director " + files[i]);
                     }
                 } else {
                     if (!files[i].delete()) {
-                        throw new MojoFailureException("Can't delete file " + files[i]);
+                        throw new MojoFailureException("Cannot delete file " + files[i]);
                     }
                 }
             }
@@ -589,7 +586,15 @@ public class ProguardMojo extends AbstractMojo {
         }
     }
 
-    private File getFileForArtifact(Artifact artifact) throws MojoExecutionException {
+    /**
+     * Utility method to return a <code>java.io.File</code> object for the provided <code>Artifact</code> object.
+     * It will check to see if the Artifact is a reference to another <code>MavenProject</code>.
+     * 
+     * @param artifact
+     * @return File
+     * @throws MojoExecutionException
+     */
+    protected File getFileForArtifact(Artifact artifact) throws MojoExecutionException {
         String refId = artifact.getGroupId() + ":" + artifact.getArtifactId();
         MavenProject project = mavenProject.getProjectReferences().get(refId);
 
@@ -606,20 +611,27 @@ public class ProguardMojo extends AbstractMojo {
     }
 
     /**
-     * Tests the filename to see if it is absolute or not. If it is absolute, it is returned. If not, it is appended to the base and returned.
+     * Utility method to test the filename to see if it is absolute or not. 
+     * If it is absolute, it is returned. If not, it is appended to the base and returned.
      * 
      * @param name
      * @param base
-     * @return
+     * @return File
      */
-    private File getAbsoluteFile(String name, File base) {
+    protected File getAbsoluteFile(String name, File base) {
         File tempFile = new File(name);
         if (!tempFile.isAbsolute())
             tempFile = new File(base, name);
         return tempFile;
     }
 
-    private void addInputJar(String inJarName) {
+    /**
+     * Utility method to add the provided input jar filename to the ProGuard arguments list as an <em>injars</em> parameter.
+     * It dynamically adds filters for manifests and maven descriptors if configured to do so
+     * 
+     * @param inJarName
+     */
+    protected void addInputJar(String inJarName) {
         String nextInJarPath = returnQuotedFilename(getAbsoluteFile(inJarName, buildDirectory));
         StringBuffer filter = new StringBuffer(nextInJarPath);
         if (excludeManifests || excludeMavenDescriptor) {
