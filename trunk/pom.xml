@@ -119,8 +119,22 @@
 					</execution>
 				</executions>
 			</plugin>
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-site-plugin</artifactId>
+				<version>3.3</version>
+				<dependencies>
+					<dependency>
+						<!-- add support for ssh/scp -->
+						<groupId>org.apache.maven.wagon</groupId>
+						<artifactId>wagon-ssh</artifactId>
+						<version>1.0</version>
+					</dependency>
+				</dependencies>
+			</plugin>
 		</plugins>
 	</build>
+
 	<profiles>
 		<profile>
 			<id>run-its</id>
@@ -159,6 +173,7 @@
 			</build>
 		</profile>
 	</profiles>
+
 	<dependencyManagement>
 		<dependencies>
 			<dependency>
@@ -218,10 +233,11 @@
 			</plugin>
 		</plugins>
 	</reporting>
+
 	<distributionManagement>
 		<site>
-			<id>your_project.sf.net</id>
-			<url>scp://shell.sourceforge.net/home/project-web/your_project/htdocs</url>
+			<id>http://mavenproguard.sourceforge.net/</id>
+			<url>scp://shell.sourceforge.net/home/project-web/mavenproguard/htdocs</url>
 		</site>
 	</distributionManagement>
 </project>
