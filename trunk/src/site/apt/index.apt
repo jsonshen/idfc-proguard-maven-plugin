@@ -1,0 +1,8 @@
+IDFC Maven ProGuard Plug-in
+
+	This plugin allows you to obfuscate Maven artifacts using the ProGuard open source obfuscator, which is a very powerful and well established Java obfuscator. 
+ProGuard can also be found on SourceForge at http://proguard.sourceforge.net/. 
+
+Trademarks
+
+	Apache Maven, Maven, Apache, the Apache feather logo, and the Apache Maven project logos are trademarks of The Apache Software Foundation.
