@@ -93,11 +93,11 @@ public final class ProguardMojo extends AbstractMojo {
     private File                  proguardOutputDirectory;
 
     /**
-     * Set this to 'false' to keep the original input files after obfuscation has completed. The default value is 'true' which means the files will be deleted.
-     * Note that this does not apply to the primary <em>inputFile</em> if the output overwrites the same file, or if the input file is a folder (e.g.
+     * Set this to 'true' to delete the original input files after obfuscation has completed. The default value is 'false' which means the files will be kept.
+     * Note that this will not apply to the primary <em>inputFile</em> if the output overwrites the same file, or if the input file is a folder (e.g.
      * target/classes)
      */
-    @Parameter(defaultValue = "true", property = "proguard.deleteinput")
+    @Parameter(defaultValue = "false", property = "proguard.deleteinput")
     private boolean               deleteInputFiles     = false;
 
     /**
@@ -217,7 +217,7 @@ public final class ProguardMojo extends AbstractMojo {
     private boolean               attach               = false;
 
     /**
-     * Specifies the artifact type to attach. Defaults to <em>${project.packaging}</em>
+     * Specifies the output artifact type. Defaults to <em>${project.packaging}</em>
      * 
      */
     @Parameter(defaultValue = "${project.packaging}")
@@ -230,11 +230,10 @@ public final class ProguardMojo extends AbstractMojo {
     private String                outputArtifactClassifier;
 
     /**
-     * Indicates whether the <em>attachArtifactClassifier</em> should be appended to the attached artifact's final name. Default value is true. This value is
-     * ignored if <em>attach=false</em>
+     * Indicates whether the <em>outputArtifactClassifier</em> should be appended to the output artifact's final name. Default value is true. 
      */
     @Parameter(defaultValue = "true")
-    private boolean               appendClassifier;
+    private boolean               appendClassifierToOutput;
 
     /**
      * Indicates whether <em>printmapping</em> should be specified. Defaults to true.
@@ -316,7 +315,7 @@ public final class ProguardMojo extends AbstractMojo {
             log.info("Bypassing ProGuard plug-in because proguard.skip is set to 'true'");
             return;
         }
-        if (appendClassifier && ((outputArtifactClassifier == null) || ("".equals(outputArtifactClassifier.length()))))
+        if (appendClassifierToOutput && ((outputArtifactClassifier == null) || ("".equals(outputArtifactClassifier.length()))))
             throw new MojoExecutionException("AppendClassifier was set to true but no classifier value was provided");
 
         // Initialize instance variables
@@ -340,7 +339,7 @@ public final class ProguardMojo extends AbstractMojo {
         // Compute the output file if not provided OR if attach=true
         if (attach || (outputFile == null)) {
             StringBuffer outputFileBuf = new StringBuffer(FilenameUtils.getBaseName(inputFile));
-            if (appendClassifier)
+            if (appendClassifierToOutput)
                 outputFileBuf.append('-').append(outputArtifactClassifier);
             outputFileBuf.append('.').append(outputArtifactType);
             outputFile = outputFileBuf.toString();
@@ -507,7 +506,7 @@ public final class ProguardMojo extends AbstractMojo {
         launchProguard(args);
         log.info("ProGuard completed without exceptions");
 
-        // Black widow the input files we obfuscated
+        // Black widow the input files we obfuscated, if specified
         if (!test && deleteInputFiles && !sameArtifact && !inJarFile.isDirectory()) {
             log.info("Deleting original input file: " + inJarFile);
             inJarFile.delete();
@@ -525,7 +524,7 @@ public final class ProguardMojo extends AbstractMojo {
         // Attach new artifact to project
         if (!test && attach && !sameArtifact) {
             log.info("Attaching resulting artifact to project: " + outJarFile);
-            mavenProjectHelper.attachArtifact(mavenProject, outputArtifactType, (appendClassifier ? outputArtifactClassifier : null), outJarFile);
+            mavenProjectHelper.attachArtifact(mavenProject, outputArtifactType, (appendClassifierToOutput ? outputArtifactClassifier : null), outJarFile);
         }
     }
 
