@@ -15,7 +15,8 @@
 			<item name="ProGuard" href="http://proguard.sourceforge.net/" />
 		</links>
 		<menu name="Home">
-			<item name="Home" href="/" />
+			<item name="Home" href="/index.html" />
+			<item name="Usage" href="/obfuscate-mojo.html" />
 		</menu>
 		<menu name="SourceForge Site">
 			<item name="Main" href="https://sourceforge.net/projects/mavenproguard/" />
