@@ -3,7 +3,7 @@
 
 	<groupId>com.idfconnect.devtools</groupId>
 	<artifactId>idfc-proguard-maven-plugin</artifactId>
-	<version>0.8.2-SNAPSHOT</version>
+	<version>0.8.2</version>
 	<packaging>maven-plugin</packaging>
 
 	<name>IDFC ProGuard Maven Plugin</name>
@@ -24,8 +24,8 @@
 		<url>https://sourceforge.net/p/mavenproguard/tickets/</url>
 	</issueManagement>
 	<scm>
-		<connection>scm:svn:https://svn.code.sf.net/p/mavenproguard/code/trunk</connection>
-		<url>https://svn.code.sf.net/p/mavenproguard/code/trunk</url>
+		<connection>scm:svn:https://svn.code.sf.net/p/mavenproguard/code/tags/idfc-proguard-maven-plugin-0.8.2</connection>
+		<url>https://svn.code.sf.net/p/mavenproguard/code/tags/idfc-proguard-maven-plugin-0.8.2</url>
 	</scm>
 
 	<developers>
