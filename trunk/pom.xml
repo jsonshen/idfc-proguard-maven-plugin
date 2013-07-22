@@ -286,5 +286,8 @@
 			<url>scp://shell.sourceforge.net/home/project-web/mavenproguard/htdocs</url>
 		</site>
 		<downloadUrl>https://sourceforge.net/projects/mavenproguard/</downloadUrl>
+		<snapshotRepository>
+			<id>sonatype-nexus-snapshots</id>
+		</snapshotRepository>
 	</distributionManagement>
 </project>
