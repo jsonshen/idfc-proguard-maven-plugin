@@ -89,6 +89,10 @@
 			<groupId>commons-io</groupId>
 			<artifactId>commons-io</artifactId>
 		</dependency>
+		<dependency>
+			<groupId>org.apache.maven.shared</groupId>
+			<artifactId>maven-dependency-tree</artifactId>
+		</dependency>
 	</dependencies>
 
 	<build>
@@ -243,6 +247,11 @@
 				<artifactId>commons-io</artifactId>
 				<version>2.4</version>
 			</dependency>
+			<dependency>
+				<groupId>org.apache.maven.shared</groupId>
+				<artifactId>maven-dependency-tree</artifactId>
+				<version>2.1</version>
+			</dependency>
 		</dependencies>
 	</dependencyManagement>
 
@@ -277,5 +286,11 @@
 			<url>scp://shell.sourceforge.net/home/project-web/mavenproguard/htdocs</url>
 		</site>
 		<downloadUrl>https://sourceforge.net/projects/mavenproguard/</downloadUrl>
+		<snapshotRepository>
+			<id>oss.sonatype.org</id>
+			<name>oss.sonatype.org-snapshots</name>
+			<url>https://oss.sonatype.org/content/repositories/snapshots/</url>
+		</snapshotRepository>
+		<repository />
 	</distributionManagement>
 </project>
