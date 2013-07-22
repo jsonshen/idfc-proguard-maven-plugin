@@ -24,9 +24,9 @@
 		<url>https://sourceforge.net/p/mavenproguard/tickets/</url>
 	</issueManagement>
 	<scm>
-		<connection>scm:svn:https://svn.code.sf.net/p/mavenproguard/code</connection>
-		<developerConnection>scm:svn:https://svn.code.sf.net/p/mavenproguard/code</developerConnection>
-		<url>https://svn.code.sf.net/p/mavenproguard/code</url>
+		<connection>scm:svn:https://svn.code.sf.net/p/mavenproguard/code/trunk</connection>
+		<developerConnection>scm:svn:https://svn.code.sf.net/p/mavenproguard/code/trunk</developerConnection>
+		<url>https://svn.code.sf.net/p/mavenproguard/code/trunk</url>
 	</scm>
 
 	<developers>
