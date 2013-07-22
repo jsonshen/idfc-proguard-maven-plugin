@@ -25,6 +25,7 @@
 	</issueManagement>
 	<scm>
 		<connection>scm:svn:https://svn.code.sf.net/p/mavenproguard/code/tags/idfc-proguard-maven-plugin-0.8.2</connection>
+		<developerConnection>scm:svn:https://svn.code.sf.net/p/mavenproguard/code/tags/idfc-proguard-maven-plugin-0.8.2</developerConnection>
 		<url>https://svn.code.sf.net/p/mavenproguard/code/tags/idfc-proguard-maven-plugin-0.8.2</url>
 	</scm>
 
