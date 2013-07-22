@@ -286,11 +286,5 @@
 			<url>scp://shell.sourceforge.net/home/project-web/mavenproguard/htdocs</url>
 		</site>
 		<downloadUrl>https://sourceforge.net/projects/mavenproguard/</downloadUrl>
-		<snapshotRepository>
-			<id>oss.sonatype.org</id>
-			<name>oss.sonatype.org-snapshots</name>
-			<url>https://oss.sonatype.org/content/repositories/snapshots/</url>
-		</snapshotRepository>
-		<repository />
 	</distributionManagement>
 </project>
