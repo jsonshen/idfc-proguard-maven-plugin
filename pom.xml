@@ -3,7 +3,7 @@
 
 	<groupId>com.idfconnect.devtools</groupId>
 	<artifactId>idfc-proguard-maven-plugin</artifactId>
-	<version>0.8.2</version>
+	<version>0.8.2-SNAPSHOT</version>
 	<packaging>maven-plugin</packaging>
 
 	<name>IDFC ProGuard Maven Plugin</name>
@@ -285,9 +285,6 @@
 			<id>http://mavenproguard.sourceforge.net/</id>
 			<url>scp://shell.sourceforge.net/home/project-web/mavenproguard/htdocs</url>
 		</site>
-		<downloadUrl>https://sourceforge.net/projects/mavenproguard/</downloadUrl>
-		<snapshotRepository>
-			<id>sonatype-nexus-snapshots</id>
-		</snapshotRepository>
+		<downloadUrl>https://sourceforge.net/projects/mavenproguard/files/latest/download</downloadUrl>
 	</distributionManagement>
 </project>
