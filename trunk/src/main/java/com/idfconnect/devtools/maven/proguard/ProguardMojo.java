@@ -8,6 +8,7 @@ import java.util.Map;
 
 import org.apache.commons.io.FilenameUtils;
 import org.apache.maven.artifact.Artifact;
+import org.apache.maven.artifact.repository.ArtifactRepository;
 import org.apache.maven.plugin.AbstractMojo;
 import org.apache.maven.plugin.MojoExecutionException;
 import org.apache.maven.plugin.MojoFailureException;
@@ -19,6 +20,9 @@ import org.apache.maven.plugins.annotations.Parameter;
 import org.apache.maven.plugins.annotations.ResolutionScope;
 import org.apache.maven.project.MavenProject;
 import org.apache.maven.project.MavenProjectHelper;
+import org.apache.maven.shared.dependency.graph.DependencyGraphBuilder;
+import org.apache.maven.shared.dependency.graph.internal.DefaultDependencyGraphBuilder;
+import org.sonatype.aether.impl.ArtifactResolver;
 
 import proguard.Configuration;
 import proguard.ConfigurationParser;
@@ -175,7 +179,7 @@ public final class ProguardMojo extends AbstractMojo {
      * Additional artifacts as <em>libraryjars</em>, e.g. javax.servlet-api:javax.servlet-ap:3.0.1.
      */
     @Parameter
-    private List<String>                                      artifactLibraryJars;
+    private List<Artifact>                                      artifactLibraryJars;
 
     /**
      * This parameter will generate additional <em>injar</em> input entries to ProGuard from the project artifacts. Set the artifact names in String form, e.g.
@@ -292,24 +296,22 @@ public final class ProguardMojo extends AbstractMojo {
     private MavenProjectHelper                                mavenProjectHelper;
 
     /**
-     * Default factory for creating artifact objects
-     */
-    //@Component
-    //private DefaultArtifactFactory factory;
-    
-    /**
      * The local repository where the artifacts are located
      */
-    //@Component
-    //private ArtifactRepository localRepository;
+    @Parameter(defaultValue = "${localRepository}", required = true, readonly = true)
+    private ArtifactRepository localRepository;
     
     /**
-     * The remote repositories where artifacts are located
+     * The artifact resolver component
      */
-    //@Component
-    //private List<RemoteRepository> remoteRepositories;
+    @Component
+    private ArtifactResolver resolver;
     
-    
+    /**
+     * The default DependencyGraphBuilder component
+     */
+    @Component(role=DependencyGraphBuilder.class)
+    private DefaultDependencyGraphBuilder graphBuilder;
     
     // //
     // Other instance variables
@@ -472,8 +474,11 @@ public final class ProguardMojo extends AbstractMojo {
         // Process additional artifactLibraryJars
 /*        
         if (artifactLibraryJars != null) {
-            for (String nextArtifactLibraryJar : artifactLibraryJars) {
+            for (Artifact nextArtifactLibraryJar : artifactLibraryJars) {
                 Artifact artifact = factory.createArtifact(groupId, artifactId, version, scope, type);
+                
+                DependencyNode node = graphBuilder.buildDependencyGraph(mavenProject, null);
+                
                 File artifactFile = artifact.getFile();
                 String path = returnQuotedFilename(artifactFile);
                 args.add(new Option("libraryjars", path));
