@@ -3,7 +3,7 @@
 
 	<groupId>com.idfconnect.devtools</groupId>
 	<artifactId>idfc-proguard-maven-plugin</artifactId>
-	<version>0.8.2</version>
+	<version>0.8.2-SNAPSHOT</version>
 	<packaging>maven-plugin</packaging>
 
 	<name>IDFC ProGuard Maven Plugin</name>
