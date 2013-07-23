@@ -8,7 +8,6 @@ import java.util.Map;
 
 import org.apache.commons.io.FilenameUtils;
 import org.apache.maven.artifact.Artifact;
-import org.apache.maven.artifact.repository.ArtifactRepository;
 import org.apache.maven.plugin.AbstractMojo;
 import org.apache.maven.plugin.MojoExecutionException;
 import org.apache.maven.plugin.MojoFailureException;
@@ -20,9 +19,13 @@ import org.apache.maven.plugins.annotations.Parameter;
 import org.apache.maven.plugins.annotations.ResolutionScope;
 import org.apache.maven.project.MavenProject;
 import org.apache.maven.project.MavenProjectHelper;
-import org.apache.maven.shared.dependency.graph.DependencyGraphBuilder;
-import org.apache.maven.shared.dependency.graph.internal.DefaultDependencyGraphBuilder;
-import org.sonatype.aether.impl.ArtifactResolver;
+import org.eclipse.aether.RepositorySystem;
+import org.eclipse.aether.RepositorySystemSession;
+import org.eclipse.aether.artifact.DefaultArtifact;
+import org.eclipse.aether.repository.RemoteRepository;
+import org.eclipse.aether.resolution.ArtifactRequest;
+import org.eclipse.aether.resolution.ArtifactResolutionException;
+import org.eclipse.aether.resolution.ArtifactResult;
 
 import proguard.Configuration;
 import proguard.ConfigurationParser;
@@ -75,26 +78,26 @@ public final class ProguardMojo extends AbstractMojo {
      * 
      */
     @Parameter(defaultValue = "false", property = "proguard.skip")
-    private boolean                                           skip                 = false;
+    private boolean                 skip                 = false;
 
     /**
      * Set this to 'true' to test the plug-in without launching ProGuard. This will simply show you how the plug-in builds the ProGuard invocation arguments
      * 
      */
     @Parameter(defaultValue = "false", property = "proguard.test")
-    private boolean                                           test                 = false;
+    private boolean                 test                 = false;
 
     /**
      * Base directory for all operations. Defaults to <code>${project.build.directory}</code>.
      */
     @Parameter(defaultValue = "${project.build.directory}", property = "proguard.builddir", required = true)
-    private File                                              buildDirectory;
+    private File                    buildDirectory;
 
     /**
      * Output directory for ProGuard files, such as the mapping file. Defaults to <code>${project.build.directory}/proguard</code>.
      */
     @Parameter(defaultValue = "${project.build.directory}/proguard", property = "proguard.output", required = true)
-    private File                                              proguardOutputDirectory;
+    private File                    proguardOutputDirectory;
 
     /**
      * Set this to 'true' to delete the original input files after obfuscation has completed. The default value is 'false' which means the files will be kept.
@@ -102,7 +105,7 @@ public final class ProguardMojo extends AbstractMojo {
      * target/classes)
      */
     @Parameter(defaultValue = "false", property = "proguard.deleteinput")
-    private boolean                                           deleteInputFiles     = false;
+    private boolean                 deleteInputFiles     = false;
 
     /**
      * Includes additional ProGuard configuration options from the provided file. This defaults to
@@ -110,89 +113,97 @@ public final class ProguardMojo extends AbstractMojo {
      * by the parameter <em>ignoreIncludeFile</em>
      */
     @Parameter(defaultValue = "${basedir}/src/main/config/${project.artifactId}-maven.pro")
-    private String                                            proguardIncludeFile;
+    private String                  proguardIncludeFile;
 
     /**
      * Set this to 'true' to disable the parameter <em>proguardInclude</em>
      */
     @Parameter(defaultValue = "false", property = "proguard.ignoreincludefile")
-    private boolean                                           ignoreIncludeFile    = false;
+    private boolean                 ignoreIncludeFile    = false;
 
     /**
      * Other arbitrary ProGuard configuration options
      */
     @Parameter
-    private Map<String, String>                               options;
+    private Map<String, String>     options;
 
     /**
      * Specifies to obfuscate the input class files. Setting this to <em>false</em> sets the ProGuard option <code>-dontobfuscate</em>
      */
     @Parameter(defaultValue = "true")
-    private boolean                                           obfuscate            = true;
+    private boolean                 obfuscate            = true;
 
     /**
      * Specifies not to shrink the input class files. Setting this to <em>false</em> sets the ProGuard option <code>-dontshrink</em>
      */
     @Parameter(defaultValue = "true")
-    private boolean                                           shrink               = true;
+    private boolean                 shrink               = true;
 
     /**
      * Tells ProGuard not to error out if there are unresolved references to classes or interfaces. Defaults to false
      */
     @Parameter(defaultValue = "false")
-    private boolean                                           dontwarn               = false;
-    
+    private boolean                 dontwarn             = false;
+
     /**
      * Specifies that project compile dependencies should be automatically added as <em>libraryjars</em>
      */
     @Parameter(defaultValue = "true")
-    private boolean                                           includeDependencies  = true;
+    private boolean                 includeDependencies  = true;
 
     /**
-     * Additional <em>injars</em>
+     * Additional <em>injars</em> in the form of coordinate Strings
      */
     @Parameter
-    private List<String>                                      inJars;
+    private List<String>            inJars;
 
     /**
      * Automatically exclude via ProGuard filter the manifests from any <em>injars</em>. Note that if this is set to false, such a filter may still be included
      * explicitly on any <em>injar</em> entry
      */
     @Parameter(defaultValue = "true")
-    private boolean                                           excludeManifests     = true;
+    private boolean                 excludeManifests     = true;
 
     /**
      * Automatically adds the java runtime jar <code>${java.home}/lib/rt.jar</code> to the ProGuard <em>libraryjars</em>. Defaults to true.
      */
     @Parameter(defaultValue = "true")
-    private boolean                                           includeJreRuntimeJar = true;
+    private boolean                 includeJreRuntimeJar = true;
     @Parameter(defaultValue = "${java.home}/lib/rt.jar", readonly = true)
-    private String                                            includedJreRuntimeJar;
+    private String                  includedJreRuntimeJar;
 
     /**
-     * Additional external <em>libraryjars</em>, e.g. ${java.home}/lib/rt.jar.
+     * Additional external <em>libraryjars</em> on the system path, e.g. ${java.home}/lib/rt.jar. Note that the preferred way to specify jars is via
+     * coordinates, not this parameter. Also note that by default all project dependencies are already automatically added
      */
     @Parameter
-    private List<String>                                      libraryJars;
+    private List<String>            libraryJarPaths;
 
     /**
-     * Additional artifacts as <em>libraryjars</em>, e.g. javax.servlet-api:javax.servlet-ap:3.0.1.
+     * Additional <em>libraryjars</em> specified by coordinate Strings, e.g. javax.servlet:javax.servlet-api:3.0.1.
      */
     @Parameter
-    private List<Artifact>                                      artifactLibraryJars;
+    private List<String>            libraryJars;
 
     /**
-     * This parameter will generate additional <em>injar</em> input entries to ProGuard from the project artifacts. Set the artifact names in String form, e.g.
-     * <code>com.idfconnect.someproject:SomeLibrary</code> to pull it from the project dependencies
+     * Coordinates of project dependencies which should be explicitly excluded from <em>libraryjars</em>. Note that this parameter has no effect if the
+     * parameter <em>includeDependencies</em> is set to <em>false</em>
      */
     @Parameter
-    private List<String>                                      inputArtifacts;
+    private List<String>            excludeLibraryJars;
+
+    /**
+     * This parameter will generate additional <em>injar</em> input entries to ProGuard from the project artifacts. Set the artifact names in coordinate String
+     * form, e.g. <code>com.idfconnect.someproject:SomeLibrary</code> to pull it from the project dependencies
+     */
+    @Parameter
+    private List<String>            inputArtifacts;
 
     /**
      * Explicitly sets the ProGuard <em>outjars</em> parameter. If not specified, the default will be used
      */
     @Parameter
-    private List<String>                                      outJars;
+    private List<String>            outJars;
 
     /**
      * Specifies the input file name (e.g. classes folder, jar, war, ear, zip, etc.) to be processed. This defaults to the typical output of the packaging
@@ -201,7 +212,7 @@ public final class ProguardMojo extends AbstractMojo {
      * the base directory.
      */
     @Parameter(defaultValue = "${project.build.finalName}.${project.packaging}")
-    private String                                            inputFile;
+    private String                  inputFile;
 
     /**
      * Specifies the ProGuard-syntax input filter to apply to the input file. Note that this does only applies to the input file. It does not apply to other
@@ -209,13 +220,13 @@ public final class ProguardMojo extends AbstractMojo {
      * elements.
      */
     @Parameter
-    private String                                            inputFileFilter;
+    private String                  inputFileFilter;
 
     /**
      * Set this to 'true' to bypass ProGuard processing when injars do not exists
      */
     @Parameter(defaultValue = "false")
-    private boolean                                           injarNotExistsSkip   = false;
+    private boolean                 injarNotExistsSkip   = false;
 
     /**
      * Specifies the names of the output archive file. If <code>attach=true</code> then this value ignored and the name is constructed based on the classifier.
@@ -223,105 +234,105 @@ public final class ProguardMojo extends AbstractMojo {
      * <code>${project.build.finalName}-&lt;artifactClassifier&gt;.${project.packaging}</code> if a classifier is specified.
      */
     @Parameter
-    private String                                            outputFile;
+    private String                  outputFile;
 
     /**
      * Specifies whether or not to attach the created artifact to the project
      * 
      */
     @Parameter(defaultValue = "true")
-    private boolean                                           attach               = true;
+    private boolean                 attach               = true;
 
     /**
      * Specifies the output artifact type. Defaults to <em>${project.packaging}</em>
      * 
      */
     @Parameter(defaultValue = "${project.packaging}")
-    private String                                            outputArtifactType;
+    private String                  outputArtifactType;
 
     /**
      * Specifies the output artifact Classifier. The default value is "small".
      */
     @Parameter(defaultValue = "small")
-    private String                                            outputArtifactClassifier;
+    private String                  outputArtifactClassifier;
 
     /**
      * Indicates whether the <em>outputArtifactClassifier</em> should be appended to the output artifact's final name. Default value is true.
      */
     @Parameter(defaultValue = "true")
-    private boolean                                           appendClassifierToOutput;
+    private boolean                 appendClassifierToOutput;
 
     /**
      * Indicates whether <em>printmapping</em> should be specified. Defaults to true.
      */
     @Parameter(defaultValue = "true")
-    private boolean                                           printMapping         = true;
+    private boolean                 printMapping         = true;
 
     /**
      * Filename to use with <em>printmapping</em>. Defaults to <em>proguard.map</em>
      */
     @Parameter(defaultValue = "proguard.map")
-    private String                                            printMappingFile     = "proguard.map";
+    private String                  printMappingFile     = "proguard.map";
 
     /**
      * Indicates whether <em>printseeds</em> should be specified. Defaults to false.
      */
     @Parameter(defaultValue = "false")
-    private boolean                                           printSeeds           = false;
+    private boolean                 printSeeds           = false;
 
     /**
      * Filename to use with <em>printseeds</em>. Defaults to <em>proguard.seeds</em>
      */
     @Parameter(defaultValue = "proguard.seeds")
-    private String                                            printSeedsFile       = "proguard.seeds";
+    private String                  printSeedsFile       = "proguard.seeds";
 
     /**
      * Set to false to include META-INF/maven/**
      */
     @Parameter(defaultValue = "true")
-    private boolean                                           excludeMavenDescriptor;
+    private boolean                 excludeMavenDescriptor;
 
     /**
      * The Maven project reference where the plug-in is being executed. This value is read-only and is populated by Maven
      * 
      */
     @Parameter(defaultValue = "${project}", required = true, readonly = true)
-    private MavenProject                                      mavenProject;
+    private MavenProject            mavenProject;
 
     /**
      * The Maven project helper component
      * 
      */
     @Component
-    private MavenProjectHelper                                mavenProjectHelper;
+    private MavenProjectHelper      mavenProjectHelper;
 
     /**
-     * The local repository where the artifacts are located
+     * RepositorySystemSession
      */
-    @Parameter(defaultValue = "${localRepository}", required = true, readonly = true)
-    private ArtifactRepository localRepository;
-    
+    @Parameter(defaultValue = "${repositorySystemSession}", required = true, readonly = true)
+    private RepositorySystemSession repoSession;
+
     /**
-     * The artifact resolver component
+     * RepositorySystem
      */
     @Component
-    private ArtifactResolver resolver;
-    
+    private RepositorySystem        repoSystem;
+
     /**
-     * The default DependencyGraphBuilder component
+     * The project's remote repositories to use for the resolution.
      */
-    @Component(role=DependencyGraphBuilder.class)
-    private DefaultDependencyGraphBuilder graphBuilder;
-    
+    @Parameter(defaultValue = "${project.remoteProjectRepositories}", required = true, readonly = true)
+    private List<RemoteRepository>  remoteRepositories;
+
     // //
     // Other instance variables
     // //
 
     // The ProGuard arguments list
-    private List<Option>                                      args                 = null;
+    private List<Option>            args                 = null;
 
     // The project's artifact map
-    private Map<String, Artifact>                             projectArtifactMap   = null;
+    private Map<String, Artifact>   projectArtifactMap   = null;
 
     /**
      * Simple utility method to enclose a filename in single quotes. This returns the canonical name of the file as a qutoed String. According to the ProGuard
@@ -357,6 +368,26 @@ public final class ProguardMojo extends AbstractMojo {
         projectArtifactMap = mavenProject.getArtifactMap(); // Resolved artifacts
         File outJarFile = null; // output File
         boolean sameArtifact = true; // indicates that the ProGuard output is the same as the input artifact
+
+        // More sanity checks - make sure any excluded libraryjar definition is in fact a dependency
+        if (excludeLibraryJars != null) {
+            for (String excluded : excludeLibraryJars) {
+                boolean found = false;
+                log.debug("Comparing excluded jar " + excluded);
+                for (Artifact artifact : mavenProject.getArtifacts()) {
+                    if ((artifact.getGroupId() + ":" + artifact.getArtifactId() + ":" + artifact.getBaseVersion()).equals(excluded)) {
+                        found = true;
+                        log.debug(excluded + " == " + artifact.toString());
+                        break;
+                    }
+                    else log.debug(excluded + " != " + artifact.getGroupId() + ":" + artifact.getArtifactId() + ":" + artifact.getBaseVersion()); 
+                            
+                                               
+                }
+                if (!found)
+                    throw new MojoExecutionException("Excluded library " + excluded + " is not a resolved project dependency");
+            }
+        }
 
         // Make sure we have a proper input file
         File inJarFile = getAbsoluteFile(inputFile, buildDirectory);
@@ -457,35 +488,34 @@ public final class ProguardMojo extends AbstractMojo {
                     continue;
                 }
 
+                if ((excludeLibraryJars != null) && (excludeLibraryJars.contains(artifact.getGroupId() + ":" + artifact.getArtifactId() + ":" + artifact.getBaseVersion()))) {
+                    log.info("Skipping " + excludeLibraryJars + " as a libraryjar since it is on the exclude list");
+                    continue;
+                }
+
                 log.info("Adding dependent library: " + artifact.getId());
                 File file = getFileForArtifact(artifact);
                 args.add(new Option("libraryjars", returnQuotedFilename(file)));
             }
         }
 
-        // Process additional libraryJars
-        if (libraryJars != null) {
-            for (String nextLibJar : libraryJars) {
+        // Process additional libraryJar paths
+        if (libraryJarPaths != null) {
+            for (String nextLibJar : libraryJarPaths) {
                 String path = returnQuotedFilename(new File(nextLibJar));
                 args.add(new Option("libraryjars", path));
             }
         }
 
         // Process additional artifactLibraryJars
-/*        
-        if (artifactLibraryJars != null) {
-            for (Artifact nextArtifactLibraryJar : artifactLibraryJars) {
-                Artifact artifact = factory.createArtifact(groupId, artifactId, version, scope, type);
-                
-                DependencyNode node = graphBuilder.buildDependencyGraph(mavenProject, null);
-                
-                File artifactFile = artifact.getFile();
+        if (libraryJars != null) {
+            for (String nextArtifactLibraryJar : libraryJars) {
+                File artifactFile = getFileForArtifact(nextArtifactLibraryJar);
                 String path = returnQuotedFilename(artifactFile);
                 args.add(new Option("libraryjars", path));
             }
         }
-*/
-        
+
         // Process the default java runtime jar
         if (includeJreRuntimeJar) {
             String path = returnQuotedFilename(new File(includedJreRuntimeJar));
@@ -637,27 +667,88 @@ public final class ProguardMojo extends AbstractMojo {
     }
 
     /**
-     * Utility method to return a <code>java.io.File</code> object for the provided <code>Artifact</code> object. It will check to see if the Artifact is a
-     * reference to another <code>MavenProject</code>.
+     * Utility method to return a <code>java.io.File</code> object for the provided Maven <code>Artifact</code> object. It will check to see if the Artifact is
+     * a reference to another <code>MavenProject</code>.
      * 
      * @param artifact
      * @return File
      * @throws MojoExecutionException
      */
     protected File getFileForArtifact(Artifact artifact) throws MojoExecutionException {
-        String refId = artifact.getGroupId() + ":" + artifact.getArtifactId();
+        org.eclipse.aether.artifact.Artifact aetherartifact = null;
+        try {
+            aetherartifact = new DefaultArtifact(artifact.getGroupId(), artifact.getArtifactId(), artifact.getClassifier(), artifact.getType(), artifact.getVersion());
+        } catch (IllegalArgumentException e) {
+            throw new MojoExecutionException(e.getMessage(), e);
+        }
+        return getFileForArtifact(aetherartifact);
+    }
+
+    /**
+     * Utility method to return a <code>java.io.File</code> object for the provided coordinates. It will check to see if the Artifact is a reference to another
+     * <code>MavenProject</code>.
+     * 
+     * @param coordinates
+     * @return File
+     * @throws MojoExecutionException
+     */
+    protected File getFileForArtifact(String coordinates) throws MojoExecutionException {
+        org.eclipse.aether.artifact.Artifact artifact = null;
+        try {
+            artifact = new DefaultArtifact(coordinates);
+        } catch (IllegalArgumentException e) {
+            throw new MojoExecutionException(e.getMessage(), e);
+        }
+        return getFileForArtifact(artifact);
+    }
+
+    /**
+     * Utility method to return a <code>java.io.File</code> object for the provided Aether artifact. It will check to see if the Artifact is a reference to
+     * another <code>MavenProject</code>.
+     * 
+     * @param aetherArtifact
+     * @return File
+     * @throws MojoExecutionException
+     */
+    protected File getFileForArtifact(org.eclipse.aether.artifact.Artifact aetherArtifact) throws MojoExecutionException {
+        String refId = aetherArtifact.getGroupId() + ":" + aetherArtifact.getArtifactId();
         MavenProject project = mavenProject.getProjectReferences().get(refId);
 
         // If we have a classifier or there is no child project, return the associated file
-        if ((artifact.getClassifier() != null) || (project == null)) {
-            File file = artifact.getFile();
+        if ((aetherArtifact.getClassifier() != null) || (project == null)) {
+            File file = aetherArtifact.getFile();
             if ((file == null) || (!file.exists()))
-                throw new MojoExecutionException("Dependency resolution needed for " + artifact);
+                return resolveArtifact(aetherArtifact);
             return file;
         }
 
         // The artifact references another project, so return that project's output directory
         return new File(project.getBuild().getOutputDirectory());
+    }
+
+    /**
+     * Utility method to resolve an artifact. Adapted from
+     * http://git.eclipse.org/c/aether/aether-demo.git/tree/aether-demo-maven-plugin/src/main/java/org/eclipse/aether/examples/maven/ResolveArtifactMojo.java
+     * 
+     * @param artifactCoordinates
+     * @throws MojoExecutionException
+     */
+    protected File resolveArtifact(org.eclipse.aether.artifact.Artifact artifact) throws MojoExecutionException {
+        ArtifactRequest request = new ArtifactRequest();
+        request.setArtifact(artifact);
+        request.setRepositories(remoteRepositories);
+
+        getLog().info("Attempting to resolving artifact " + artifact + " from " + remoteRepositories);
+
+        ArtifactResult result;
+        try {
+            result = repoSystem.resolveArtifact(repoSession, request);
+        } catch (ArtifactResolutionException e) {
+            throw new MojoExecutionException(e.getMessage(), e);
+        }
+
+        getLog().info("Successfully resolved artifact " + artifact + " to " + result.getArtifact().getFile() + " from " + result.getRepository());
+        return result.getArtifact().getFile();
     }
 
     /**
