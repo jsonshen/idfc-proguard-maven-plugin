@@ -260,7 +260,7 @@ public final class ProguardMojo extends AbstractMojo {
      * Indicates whether the <em>outputArtifactClassifier</em> should be appended to the output artifact's final name. Default value is true.
      */
     @Parameter(defaultValue = "true")
-    private boolean                 appendClassifierToOutput;
+    private boolean                 outputClassifierAppend;
 
     /**
      * Indicates whether <em>printmapping</em> should be specified. Defaults to true.
@@ -360,7 +360,7 @@ public final class ProguardMojo extends AbstractMojo {
             log.info("Bypassing ProGuard plug-in because proguard.skip is set to 'true'");
             return;
         }
-        if (appendClassifierToOutput && ((outputArtifactClassifier == null) || ("".equals(outputArtifactClassifier.length()))))
+        if (outputClassifierAppend && ((outputArtifactClassifier == null) || ("".equals(outputArtifactClassifier.length()))))
             throw new MojoExecutionException("AppendClassifier was set to true but no classifier value was provided");
 
         // Initialize instance variables
@@ -379,10 +379,9 @@ public final class ProguardMojo extends AbstractMojo {
                         found = true;
                         log.debug(excluded + " == " + artifact.toString());
                         break;
-                    }
-                    else log.debug(excluded + " != " + artifact.getGroupId() + ":" + artifact.getArtifactId() + ":" + artifact.getBaseVersion()); 
-                            
-                                               
+                    } else
+                        log.debug(excluded + " != " + artifact.getGroupId() + ":" + artifact.getArtifactId() + ":" + artifact.getBaseVersion());
+
                 }
                 if (!found)
                     throw new MojoExecutionException("Excluded library " + excluded + " is not a resolved project dependency");
@@ -404,7 +403,7 @@ public final class ProguardMojo extends AbstractMojo {
         // Compute the output file if not provided OR if attach=true
         if (attach || (outputFile == null)) {
             StringBuffer outputFileBuf = new StringBuffer(FilenameUtils.getBaseName(inputFile));
-            if (appendClassifierToOutput)
+            if (outputClassifierAppend)
                 outputFileBuf.append('-').append(outputArtifactClassifier);
             outputFileBuf.append('.').append(outputArtifactType);
             outputFile = outputFileBuf.toString();
@@ -605,7 +604,7 @@ public final class ProguardMojo extends AbstractMojo {
         // Attach new artifact to project
         if (!test && attach && !sameArtifact) {
             log.info("Attaching resulting artifact to project: " + outJarFile);
-            mavenProjectHelper.attachArtifact(mavenProject, outputArtifactType, (appendClassifierToOutput ? outputArtifactClassifier : null), outJarFile);
+            mavenProjectHelper.attachArtifact(mavenProject, outputArtifactType, (outputClassifierAppend ? outputArtifactClassifier : null), outJarFile);
         }
     }
 
@@ -645,25 +644,26 @@ public final class ProguardMojo extends AbstractMojo {
         }
     }
 
-    // TODO replace this
-    private static boolean deleteFileOrDirectory(File path) throws MojoFailureException {
+    /**
+     * Utility method used to delete the output file or folder in preparation for running the task
+     * 
+     * @param path
+     * @return
+     * @throws MojoFailureException
+     */
+    protected boolean deleteFileOrDirectory(File path) throws MojoFailureException {
         if (path.isDirectory()) {
             File[] files = path.listFiles();
             for (int i = 0; i < files.length; i++) {
                 if (files[i].isDirectory()) {
-                    if (!deleteFileOrDirectory(files[i])) {
+                    if (!deleteFileOrDirectory(files[i]))
                         throw new MojoFailureException("Cannot delete director " + files[i]);
-                    }
-                } else {
-                    if (!files[i].delete()) {
-                        throw new MojoFailureException("Cannot delete file " + files[i]);
-                    }
-                }
+                } else if (!files[i].delete())
+                    throw new MojoFailureException("Cannot delete file " + files[i]);
             }
             return path.delete();
-        } else {
+        } else
             return path.delete();
-        }
     }
 
     /**
