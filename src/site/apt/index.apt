@@ -1,7 +1,7 @@
 IDFC Maven ProGuard Plug-in
 
 	This plugin allows you to obfuscate Maven artifacts using the ProGuard open source obfuscator, which is a very powerful and well established Java obfuscator. 
-ProGuard can also be found on SourceForge at http://proguard.sourceforge.net/. 
+ProGuard can also be found on SourceForge at http://proguard.sourceforge.net/. The plugin requires Maven 3.1 and Java6.
 
 Trademarks
 
