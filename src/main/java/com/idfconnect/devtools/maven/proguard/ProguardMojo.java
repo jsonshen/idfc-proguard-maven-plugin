@@ -554,7 +554,7 @@ public final class ProguardMojo extends AbstractMojo {
         if (includeDependencies) {
             for (Artifact artifact : mavenProject.getArtifacts()) {
                 log.debug("Processing dependency " + artifact.getId());
-                if (inputArtifacts.contains(artifact.getGroupId() + ":" + artifact.getArtifactId())) {
+                if (inputArtifacts != null && inputArtifacts.contains(artifact.getGroupId() + ":" + artifact.getArtifactId())) {
                     log.info("Skipping " + artifact.getId() + " as a libraryjar since it is already an included dependency");
                     continue;
                 }
